@@ -1,0 +1,43 @@
+version: "3.7"
+
+services:
+  redis:
+    image: redis
+    restart: always
+    ports:
+      - 6379:6379
+
+
+  db:
+    image: postgres
+    restart: always
+    volumes:
+      - ./postgres_data:/var/lib/postgresql/data
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: admin
+      POSTGRES_DB: univers
+      POSTGRES_DB_ARGS: "-A md5"
+    ports:
+      - 543:5432
+
+
+  university_direction:
+    restart: always
+    build:
+      context: ./webapp
+    ports:
+      - 8000:8000
+    depends_on:
+      - db
+    command: python ./source/manage.py runserver 0.0.0.0:8000
+
+
+  worker:
+    restart: always
+    build:
+      context: ./webapp
+    volumes:
+      - ./reports:/app/source/reports
+    command: celery --workdir=./source -A university_direction worker -l INFO
+
